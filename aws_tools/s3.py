@@ -233,6 +233,26 @@ class S3:
                 callback(object_key=key, file_path=file_path)
 
 
+    async def get_presigned_url_async(
+                self,
+                bucket_name: str,
+                key: str,
+                expires_seconds: int=3600
+            ) -> str:
+        """
+        Returns a pre-signed URL (valid for a limited duration)
+        """
+        return await self.client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": bucket_name,
+                "Key": key,
+                "ResponseContentDisposition": f'attachment; filename="{key.split("/")[-1]}"',
+            },
+            ExpiresIn=expires_seconds,
+        )
+
+
     async def upload_data_async(
             self,
             data: bytes,
