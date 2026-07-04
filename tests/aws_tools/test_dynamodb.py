@@ -132,8 +132,8 @@ class DynamoDBTest(unittest.TestCase):
             async with DynamoDB() as ddb:
                 table = await Table(ddb, self.table_name)
                 # test missing items behaviour
-                assert (await table.scan_items_async())[0] == []
-                assert (await table.query_items_async(hash_key=self.item_id["id"], page_start_token=None))[0] == []
+                assert (await table.scan_items_paginated_async())[0] == []
+                assert (await table.query_items_paginated_async(hash_key=self.item_id["id"], page_start_token=None))[0] == []
                 # create the item
                 await table.put_item_async(self.item, overwrite=False)
                 assert (await table.get_item_async(self.item_id))["event_time"] == "23h30"
@@ -141,21 +141,21 @@ class DynamoDBTest(unittest.TestCase):
                 assert (await table.get_item_async(self.another_id))["event_time"] == "21h00"
                 assert table.keys["RANGE"] == "event_time"  # event time is the sort key
                 # scan all items
-                assert all(v in (self.another_item, self.item) for v in (await table.scan_items_async())[0])
+                assert all(v in (self.another_item, self.item) for v in (await table.scan_items_paginated_async())[0])
                 assert all(v in (self.another_item, self.item) for v in [v async for v in table.scan_all_items_async(conditions=Attr("field").eq(Decimal(10.0)))])
                 # query with hash key only
-                assert all(v in (self.another_item, self.item) for v in (await table.query_items_async(hash_key=self.item_id["id"], page_start_token=None))[0])
+                assert all(v in (self.another_item, self.item) for v in (await table.query_items_paginated_async(hash_key=self.item_id["id"], page_start_token=None))[0])
                 assert all(v in (self.another_item, self.item) for v in [v async for v in table.query_all_items_async(hash_key=self.item_id["id"])])
                 # query with hash and sort key
-                assert (await table.query_items_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter="23"))[0] == [self.item]
-                assert (await table.query_items_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter=(None, "21h00")))[0] == [self.another_item]
-                assert (await table.query_items_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter=("23h30", None)))[0] == [self.item]
-                assert (await table.query_items_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter=("21h00", "23h30")))[0] == [self.another_item, self.item]
-                assert (await table.query_items_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter=("21h00", "23h30"), ascending=False))[0] == [self.item, self.another_item]
+                assert (await table.query_items_paginated_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter="23"))[0] == [self.item]
+                assert (await table.query_items_paginated_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter=(None, "21h00")))[0] == [self.another_item]
+                assert (await table.query_items_paginated_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter=("23h30", None)))[0] == [self.item]
+                assert (await table.query_items_paginated_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter=("21h00", "23h30")))[0] == [self.another_item, self.item]
+                assert (await table.query_items_paginated_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter=("21h00", "23h30"), ascending=False))[0] == [self.item, self.another_item]
                 # scan with conditions
-                assert (await table.scan_items_async(conditions=Attr("field").eq(Decimal(10.0)) & Attr("some_field").eq("ok")))[0] == [self.item]
+                assert (await table.scan_items_paginated_async(conditions=Attr("field").eq(Decimal(10.0)) & Attr("some_field").eq("ok")))[0] == [self.item]
                 # query with conditions
-                assert (await table.query_items_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter=("21h00", "23h30"), conditions=Attr("field").eq(Decimal(10.0))))[0] == [self.item]
+                assert (await table.query_items_paginated_async(hash_key=self.item_id["id"], page_start_token=None, sort_key_filter=("21h00", "23h30"), conditions=Attr("field").eq(Decimal(10.0))))[0] == [self.item]
         asyncio.run(test())
 
     def test_update_item(self):

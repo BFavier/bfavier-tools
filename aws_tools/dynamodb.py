@@ -579,7 +579,7 @@ class Table(Awaitable["Table"]):
             else:
                 raise ValueError("Expected iterable for 'keys_or_items' argument")
 
-    async def scan_items_async(
+    async def scan_items_paginated_async(
             self,
             conditions: Conditions | None = None,
             subset: list[str] | None = None,
@@ -662,13 +662,13 @@ class Table(Awaitable["Table"]):
         )
         next_page_token = None
         while True:
-            items, next_page_token = await self.scan_items_async(page_start_token=next_page_token, **kwargs)
+            items, next_page_token = await self.scan_items_paginated_async(page_start_token=next_page_token, **kwargs)
             for item in items:
                 yield item
             if next_page_token is None:
                 break
 
-    async def query_items_async(
+    async def query_items_paginated_async(
             self,
             hash_key: object,
             page_start_token: str | None,
@@ -789,7 +789,7 @@ class Table(Awaitable["Table"]):
         )
         next_page_token = None
         while True:
-            items, next_page_token = await self.query_items_async(page_start_token=next_page_token, **kwargs)
+            items, next_page_token = await self.query_items_paginated_async(page_start_token=next_page_token, **kwargs)
             for item in items:
                 yield item
             if next_page_token is None:
