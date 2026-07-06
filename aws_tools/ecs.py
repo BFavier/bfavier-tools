@@ -362,3 +362,8 @@ class ElasticContainerService:
                 ):
             arns.extend(page["taskDefinitionArns"])
         return arns
+
+    async def list_task_family_revisions_async(self, task_family: str) -> list[int]:
+        arns = await self.list_task_definition_arns_async(family_prefix=task_family)  # ex: 'arn:aws:ecs:us-east-1:<aws_account_id>:task-definition/wordpress:3'
+        arns = [arn for arn in arns if arn.split("/")[-1].startswith(task_family+":")]  # filter on exact task family name
+        return [int(arn.split(":")[-1]) for arn in arns]
