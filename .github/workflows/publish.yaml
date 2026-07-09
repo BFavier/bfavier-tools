@@ -34,7 +34,7 @@ jobs:
           from datetime import datetime, timezone
           from pathlib import Path
           now = datetime.now(timezone.utc)
-          version = f"{now.year}.{now.month}.{now.day}.{now:%H%M%S}"
+          version = f"{now.year}.{now.month}.{now.day}.{now.hour:02}{now.minute:02}{now.second:02}{now.microsecond:06}"
           Path("bfavier_tools/_version.py").write_text(f'__version__ = "{version}"\n')
           print(f"Version: {version}")
           EOF
