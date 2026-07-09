@@ -1,0 +1,46 @@
+name: Publish to PyPI
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+
+      - name: Generate version
+        run: |
+          python <<'EOF'
+          from datetime import datetime, timezone
+          from pathlib import Path
+          now = datetime.now(timezone.utc)
+          version = f"{now.year}.{now.month}.{now.day}.{now:%H%M%S}"
+          Path("bfavier_tools/_version.py").write_text(f'__version__ = "{version}"\n')
+          print(f"Version: {version}")
+          EOF
+
+      - name: Build package
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
