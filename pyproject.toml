@@ -14,10 +14,11 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 include = [
+  "bfavier_tools", "bfavier_tools.*",
   "aws_tools", "aws_tools.*",
   "security_tools", "security_tools.*",
   "compression_tools", "compression_tools.*"
 ]
 
 [tool.setuptools.dynamic]
-version = {attr = "aws_tools.__version__"}
+version = {attr = "bfavier_tools.__version__"}
