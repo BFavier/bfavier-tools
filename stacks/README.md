@@ -14,16 +14,16 @@ aws s3api create-bucket --bucket ${MY_STACK_BUCKET}
 Then clone the repository:
 
 ```bash
-git clone https://github.com/BFavier/aws-tools.git
+git clone https://github.com/BFavier/bfavier-tools.git
 ```
 
 Finally copy the stacks to the bucket (remember to change the name of the bucket here below - also remove the **--dryrun** once you are confident about the changelog)
 
 ```bash
-aws s3 sync ./aws-tools/stacks/ s3://${MY_STACK_BUCKET} --delete --dryrun
+aws s3 sync ./bfavier-tools/stacks/ s3://${MY_STACK_BUCKET} --delete --dryrun
 ```
 
-## 2) Use the stackes in nested stack templates
+## 2) Use the stacks in nested stack templates
 
 You can then deploy them directly
 

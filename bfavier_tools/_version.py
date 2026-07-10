@@ -1,1 +1,1 @@
-__version__ = "yyyy.mm.dd+ssuuuu"
+__version__ = "yyyy.mm.dd.hhmmssuuuuuu"

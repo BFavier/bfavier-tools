@@ -120,6 +120,7 @@ Resources:
           - !Ref RunerRolePolicyArn
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
+    UpdateReplacePolicy: Retain
     Properties:
       Family: !Ref TaskFamily
       ContainerDefinitions:
