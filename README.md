@@ -1,3 +1,3 @@
-# AWS tools
+# BFavier-tools
 
-AWS tools is a repository containing tools for creating stacks with aws cloudformation and a python package with wrapers around boto3.
+BFavier-tools is a repository containing tools for interacting with aws, deploy some API, and more.
