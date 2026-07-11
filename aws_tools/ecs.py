@@ -318,7 +318,8 @@ class ElasticContainerService:
         subset_arns = [task_arns[i:i+chunk_size] for i in range(0, chunk_size)]
         response = []
         for arns in subset_arns:
-            response.extend(await self.client.describe_tasks(cluster=cluster_name, tasks=arns, include=["TAGS"])["tasks"])
+            if len(arns) > 0:
+                response.extend((await self.client.describe_tasks(cluster=cluster_name, tasks=arns, include=["TAGS"]))["tasks"])
         descriptions = {task["taskArn"]: task for task in response}
         return {arn: ECSTaskDescription(**descriptions[arn]) for arn in task_arns if arn in descriptions.keys()}
 
