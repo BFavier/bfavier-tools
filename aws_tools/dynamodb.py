@@ -14,6 +14,30 @@ from botocore.exceptions import ClientError
 KeyType = dict[Literal["HASH", "RANGE"], object]
 
 
+def _recursive_convert(item: object, to_decimal: bool, n_decimals: int=9) -> object:
+        """
+        convert floats to Decimals (or inversely) recursively in a JSON serialisable
+        """
+        if isinstance(item, list):
+            return [_recursive_convert(i, to_decimal) for i in item]
+        elif isinstance(item, set):
+            return {_recursive_convert(i, to_decimal) for i in item}
+        elif isinstance(item, dict):
+            return {k: _recursive_convert(v, to_decimal) for k, v in item.items() if v != set()}  # remove keys corresponding to empty sets
+        elif item is None or isinstance(item, (str, bool)):
+            return item
+        elif isinstance(item, (int, float)) and to_decimal:
+            number = str(round(item, n_decimals))
+            if "." in number:
+                int_part, decimal_part = number.split(".")
+                number = f"{int_part}.{decimal_part[:n_decimals]}"
+            return Decimal(number)
+        elif isinstance(item, Decimal) and not to_decimal:
+            return float(item) if item % 1 != 0 else int(item)
+        else:
+            raise ValueError(f"Unexpected type '{type(item).__name__}' encountered.")
+
+
 class Conditions:
     """
     Base class representing a node in the Conditions tree.
@@ -63,7 +87,7 @@ class Conditions:
         Register a condition value in the mapping an return it's reference
         """
         attribute_name = f":condition{sum(v.startswith(":condition") for v in attribute_values)}"
-        attribute_values[attribute_name] = attribute_value
+        attribute_values[attribute_name] = _recursive_convert(attribute_value, to_decimal=True)
         return attribute_name
 
     def condition_expression(self, inverse_attribute_names: dict[str, str], attribute_values: dict[str, Any]) -> str:
@@ -307,30 +331,6 @@ class Table(Awaitable["Table"]):
     def _raise_not_initialized(self):
         raise RuntimeError(f"Table '{self.name}' was not awaited after creation, it is not properly intialized")
 
-    @classmethod
-    def _recursive_convert(cls, item: object, to_decimal: bool, n_decimals: int=9) -> object:
-        """
-        replace floats with Decimal objects recursively in a dict
-        """
-        if isinstance(item, list):
-            return [cls._recursive_convert(i, to_decimal) for i in item]
-        elif isinstance(item, set):
-            return {cls._recursive_convert(i, to_decimal) for i in item}
-        elif isinstance(item, dict):
-            return {k: cls._recursive_convert(v, to_decimal) for k, v in item.items() if v != set()}  # remove keys corresponding to empty sets
-        elif item is None or isinstance(item, (str, bool)):
-            return item
-        elif isinstance(item, (int, float)) and to_decimal:
-            number = str(round(item, n_decimals))
-            if "." in number:
-                int_part, decimal_part = number.split(".")
-                number = f"{int_part}.{decimal_part[:n_decimals]}"
-            return Decimal(number)
-        elif isinstance(item, Decimal) and not to_decimal:
-            return float(item) if item % 1 != 0 else int(item)
-        else:
-            raise ValueError(f"Unexpected type '{type(item).__name__}' encountered.")
-
     @staticmethod
     def _extract_item_field_value(item: dict | None, field_path: str | tuple[str | int]) -> object:
         """
@@ -450,7 +450,7 @@ class Table(Awaitable["Table"]):
             Key={v: key_or_item[v] for v in self.keys.values()},
             ConsistentRead=consistent_read
         )
-        return self._recursive_convert(response.get("Item"), to_decimal=False)
+        return _recursive_convert(response.get("Item"), to_decimal=False)
 
     async def put_item_async(self, item: dict, overwrite: bool=False, return_object: bool=False) -> dict | None:
         """
@@ -474,7 +474,7 @@ class Table(Awaitable["Table"]):
             condition_expression = None
         try:
             response = await self.table.put_item(
-                Item=self._recursive_convert(item, to_decimal=True),
+                Item=_recursive_convert(item, to_decimal=True),
                 ReturnValues="ALL_OLD" if return_object else "NONE",  # returns the overwritten item if any
                 **(dict() if conditions is None else dict(
                     ConditionExpression=condition_expression,
@@ -490,7 +490,7 @@ class Table(Awaitable["Table"]):
                 raise DynamoDBException(f"Item '{key}' already exists for table '{self.table.name}'")
             else:
                 raise
-        return self._recursive_convert(response.get("Attributes"), to_decimal=False)
+        return _recursive_convert(response.get("Attributes"), to_decimal=False)
 
     async def batch_get_items_async(self, keys_or_items: Iterable[dict], chunk_size: int=100, consistent_read: bool=False) -> AsyncIterable[dict]:
         """
@@ -518,7 +518,7 @@ class Table(Awaitable["Table"]):
                 )
                 unprocessed_keys = response.get("UnprocessedKeys", {}).get(self.name, {}).get("Keys", [])
             for key in chunk_keys:
-                yield self._recursive_convert(processed_items.get(tuple(key[k] for k in self.keys.values())), to_decimal=False)
+                yield _recursive_convert(processed_items.get(tuple(key[k] for k in self.keys.values())), to_decimal=False)
 
     async def batch_put_items_async(self, items: Iterable[dict] | AsyncIterable[dict]):
         """
@@ -527,10 +527,10 @@ class Table(Awaitable["Table"]):
         async with self.table.batch_writer() as batch:
             if isinstance(items, AsyncIterableABC):
                 async for item in items:
-                    await batch.put_item(Item=self._recursive_convert(item, to_decimal=True))
+                    await batch.put_item(Item=_recursive_convert(item, to_decimal=True))
             elif isinstance(items, IterableABC):
                 for item in items:
-                    await batch.put_item(Item=self._recursive_convert(item, to_decimal=True))
+                    await batch.put_item(Item=_recursive_convert(item, to_decimal=True))
             else:
                 raise ValueError("Expected iterable for argument 'items'")
 
@@ -563,7 +563,7 @@ class Table(Awaitable["Table"]):
                 return None
             else:
                 raise
-        return self._recursive_convert(response.get("Attributes"), to_decimal=False)
+        return _recursive_convert(response.get("Attributes"), to_decimal=False)
 
     async def batch_delete_items_async(self, keys_or_items: Iterable[dict] | AsyncIterable[dict]):
         """
@@ -642,7 +642,7 @@ class Table(Awaitable["Table"]):
             **(dict(Limit=page_size) if page_size is not None else dict())
         }
         response = await self.table.scan(ConsistentRead=consistent_read, **kwargs)
-        return ([self._recursive_convert(item, to_decimal=False) for item in response.get("Items", [])], response.get("LastEvaluatedKey"))
+        return ([_recursive_convert(item, to_decimal=False) for item in response.get("Items", [])], response.get("LastEvaluatedKey"))
 
     async def scan_all_items_async(
                 self,
@@ -763,7 +763,7 @@ class Table(Awaitable["Table"]):
             ConsistentRead=consistent_read,
             **kwargs
         )
-        return ([self._recursive_convert(item, to_decimal=False) for item in response.get("Items", [])], response.get("LastEvaluatedKey"))
+        return ([_recursive_convert(item, to_decimal=False) for item in response.get("Items", [])], response.get("LastEvaluatedKey"))
 
     async def query_all_items_async(
             self,
@@ -863,23 +863,23 @@ class Table(Awaitable["Table"]):
         expression_iterable = iter(expressions)
         set_expressions = []
         for i, (value, expr) in enumerate(zip(put_fields.values(), expression_iterable)):
-            attribute_values[f":set_value{i}"] = self._recursive_convert(value, to_decimal=True)
+            attribute_values[f":set_value{i}"] = _recursive_convert(value, to_decimal=True)
             set_expressions.append(f"{expr} = :set_value{i}")
         for i, (value, expr) in enumerate(zip(extend_arrays.values(), expression_iterable)):
-            attribute_values[f":extend_value{i}"] = self._recursive_convert(list(value), to_decimal=True)
+            attribute_values[f":extend_value{i}"] = _recursive_convert(list(value), to_decimal=True)
             attribute_values[f":empty_list"] = []
             set_expressions.append(f"{expr} = list_append(if_not_exists({expr}, :empty_list), :extend_value{i})")
         add_expressions = []
         for i, (value, expr) in enumerate(zip(increment_fields.values(), expression_iterable)):
-            attribute_values[f":add_value{i}"] = self._recursive_convert(value, to_decimal=True)
+            attribute_values[f":add_value{i}"] = _recursive_convert(value, to_decimal=True)
             add_expressions.append(f"{expr} :add_value{i}")
         for i, (value, expr) in enumerate(zip(extend_sets.values(), expression_iterable)):
-            attribute_values[f":insert_value{i}"] = self._recursive_convert(value, to_decimal=True)
+            attribute_values[f":insert_value{i}"] = _recursive_convert(value, to_decimal=True)
             add_expressions.append(f"{expr} :insert_value{i}")
         delete_expressions = []
         for i, (value, expr) in enumerate(zip(remove_from_sets.values(), expression_iterable)):
             value = value if isinstance(value, set) else {value}
-            attribute_values[f":pop_value{i}"] = self._recursive_convert(value, to_decimal=True)
+            attribute_values[f":pop_value{i}"] = _recursive_convert(value, to_decimal=True)
             delete_expressions.append(f"{expr} :pop_value{i}")
         remove_expressions = []
         for i, (value, expr) in enumerate(zip(delete_fields, expression_iterable)):
@@ -910,7 +910,7 @@ class Table(Awaitable["Table"]):
         if not return_object:
             return
         else:
-            return self._recursive_convert(response.get("Attributes"), to_decimal=False)
+            return _recursive_convert(response.get("Attributes"), to_decimal=False)
 
     async def get_item_fields_async(
             self,
@@ -952,4 +952,4 @@ class Table(Awaitable["Table"]):
         if item is None:
             return None
         fields = {f: self._extract_item_field_value(item, f) for f in fields if self._field_exists(item, f)}
-        return self._recursive_convert(fields, to_decimal=False)
+        return _recursive_convert(fields, to_decimal=False)
