@@ -176,7 +176,9 @@ Resources:
         CookiesConfig:
           CookieBehavior: all
         HeadersConfig:
-          HeaderBehavior: allViewer
+          HeaderBehavior: allViewerAndWhitelistCloudFront
+          Headers:
+            - CloudFront-Forwarded-Proto
         QueryStringsConfig:
           QueryStringBehavior: all
   CloudFrontCachePolicy:
