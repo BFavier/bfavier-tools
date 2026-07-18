@@ -1,7 +1,8 @@
 import json
 import aioboto3
 from operator import __and__
-from typing import Self, Literal, Iterable, AsyncIterable, Generator, Awaitable, Any
+from base64 import urlsafe_b64encode, urlsafe_b64decode
+from typing import Literal, Iterable, AsyncIterable, Generator, Awaitable, Any
 from collections.abc import Iterable as IterableABC, AsyncIterable as AsyncIterableABC
 from decimal import Decimal
 from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
@@ -635,13 +636,14 @@ class Table(Awaitable["Table"]):
             **(dict(FilterExpression=filter_expression) if filter_expression is not None else dict()),
             **(dict(ExpressionAttributeNames=attribute_names) if attribute_names is not None else dict()),
             **(dict(ExpressionAttributeValues=attribute_values) if attribute_values is not None  and len(attribute_values) > 0 else dict()),
-            **(dict(ExclusiveStartKey=json.loads(page_start_token)) if page_start_token is not None else dict()),
+            **(dict(ExclusiveStartKey=json.loads(urlsafe_b64decode(page_start_token.encode()).decode())) if page_start_token is not None else dict()),
             **(dict(ProjectionExpression=",".join(subset)) if subset is not None else dict()),
             **(dict(Limit=page_size) if page_size is not None else dict())
         }
         response = await self.table.scan(ConsistentRead=consistent_read, **kwargs)
         last_key = response.get("LastEvaluatedKey") or {}
-        return ([_recursive_convert(item, to_decimal=False) for item in response.get("Items", [])], json.dumps(last_key) if len(last_key) > 0 else None)
+        next_page_token = urlsafe_b64encode(json.dumps(last_key).encode()).decode() if len(last_key) > 0 else None
+        return ([_recursive_convert(item, to_decimal=False) for item in response.get("Items", [])], next_page_token)
 
     async def scan_all_items_async(
                 self,
@@ -752,7 +754,7 @@ class Table(Awaitable["Table"]):
             **(dict(FilterExpression=filter_expression) if filter_expression is not None else dict()),
             **(dict(ExpressionAttributeNames=attribute_names) if attribute_names is not None else dict()),
             **(dict(ExpressionAttributeValues=attribute_values) if attribute_values is not None and len(attribute_values) > 0 else dict()),
-            **(dict(ExclusiveStartKey=json.loads(page_start_token)) if page_start_token is not None else dict()),
+            **(dict(ExclusiveStartKey=json.loads(urlsafe_b64decode(page_start_token.encode()).decode())) if page_start_token is not None else dict()),
             **(dict(ProjectionExpression=",".join(subset)) if subset is not None else dict()),
             **(dict(Limit=page_size) if page_size is not None else dict())
         }
@@ -763,7 +765,8 @@ class Table(Awaitable["Table"]):
             **kwargs
         )
         last_key = response.get("LastEvaluatedKey") or {}
-        return ([_recursive_convert(item, to_decimal=False) for item in response.get("Items", [])], json.dumps(last_key) if len(last_key) > 0 else None)
+        next_page_token = urlsafe_b64encode(json.dumps(last_key).encode()).decode() if len(last_key) > 0 else None
+        return ([_recursive_convert(item, to_decimal=False) for item in response.get("Items", [])], next_page_token)
 
     async def query_all_items_async(
             self,
