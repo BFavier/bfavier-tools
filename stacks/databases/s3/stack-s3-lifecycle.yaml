@@ -16,7 +16,6 @@ Parameters:
 Resources:
   LifecycleFunction:
     Type: AWS::Lambda::Function
-    DependsOn: SetLifecycleLogGroup
     Properties:
       Runtime: python3.12
       Handler: index.handler
@@ -103,9 +102,9 @@ Resources:
                 Action:
                   - logs:*
                 Resource: "*"
-  SetLifecyclePolicy:
+  SetLifecycleCustomResource:
     Type: Custom::SetLifecycle
-    DependsOn: LifecycleFunction
+    DependsOn: SetLifecycleLogGroup
     Properties:
       ServiceToken: !GetAtt LifecycleFunction.Arn  # This is not used but required
       ruleId: !Sub "${AWS::StackName}-LifecycleRule"
@@ -115,5 +114,7 @@ Resources:
   SetLifecycleLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-SetLifecycle"
+      LogGroupName: !Sub
+      - "/aws/lambda/${Name}"
+      - Name: !Ref LifecycleFunction
       RetentionInDays: 30

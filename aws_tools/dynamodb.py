@@ -1,6 +1,7 @@
 import json
 import aioboto3
 from operator import __and__
+from datetime import datetime
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from typing import Literal, Iterable, AsyncIterable, Generator, Awaitable, Any
 from collections.abc import Iterable as IterableABC, AsyncIterable as AsyncIterableABC
@@ -21,6 +22,8 @@ def _recursive_convert(item: object, to_decimal: bool, n_decimals: int=9) -> obj
             return [_recursive_convert(i, to_decimal) for i in item]
         elif isinstance(item, set):
             return {_recursive_convert(i, to_decimal) for i in item}
+        elif isinstance(item, datetime):
+            return item.isoformat()
         elif isinstance(item, dict):
             return {k: _recursive_convert(v, to_decimal) for k, v in item.items() if v != set()}  # remove keys corresponding to empty sets
         elif item is None or isinstance(item, (str, bool)):
