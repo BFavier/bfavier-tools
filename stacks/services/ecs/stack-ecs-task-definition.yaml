@@ -42,7 +42,7 @@ Parameters:
 
   EnvironmentFile:
     Type: String
-    Description: The s3 uri (s3://.../variables.env) of .env file containing env variables definitions (MY_ENV=VALUE). They must be read accessible from the runner role.
+    Description: The s3 Arn (such as 'arn:aws:s3:::bucket-name/path/.env') of .env file containing env variables definitions (MY_ENV=VALUE). They must be read accessible from the runner role.
     Default: ''
   RunerRolePolicyArn:
     Type: String
