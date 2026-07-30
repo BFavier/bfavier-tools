@@ -12,7 +12,7 @@ def totp_time_interval_index(at_time: datetime | None=None, period_seconds: int=
     if at_time is None:
         at_time = datetime.now(tz=UTC)
     assert at_time.tzinfo is not None
-    at_time = at_time.astimezone(UTC)
+    at_time = at_time.replace(tzinfo=UTC) if at_time.tzinfo is None else at_time.astimezone(UTC)
     return int(at_time.timestamp()) // period_seconds
 
 
