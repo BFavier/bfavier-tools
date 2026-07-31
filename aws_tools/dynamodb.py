@@ -902,8 +902,8 @@ class Table(Awaitable["Table"]):
                 Key=key,
                 UpdateExpression=expression,
                 ExpressionAttributeNames=attribute_names,
-                ExpressionAttributeValues=attribute_values,
                 ReturnValues=f"ALL_{return_object}" if return_object else "NONE",  # Return the updated values after setting
+                **(dict() if len(attribute_values) == 0 else dict(ExpressionAttributeValues=attribute_values)),
                 **(dict() if condition_expression is None else dict(ConditionExpression=condition_expression))
                 )
         except ClientError as e:
