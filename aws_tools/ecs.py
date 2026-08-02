@@ -262,7 +262,7 @@ class ElasticContainerService:
         }
         container_overrides = {k : v for k, v in container_overrides.items() if v is not None}
         overrides = {}
-        if disk_GiB_override > 20:
+        if disk_GiB_override is not None and disk_GiB_override > 20:
             overrides["ephemeralStorage"] = {"sizeInGiB": disk_GiB_override}
         if len(container_overrides.keys()) > 1:
             overrides["containerOverrides"] = [container_overrides]
