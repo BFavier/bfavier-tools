@@ -494,7 +494,7 @@ class Table(Awaitable["Table"]):
                 raise
         return _recursive_convert(response.get("Attributes"), to_decimal=False)
 
-    async def batch_get_items_async(self, keys_or_items: Iterable[dict], chunk_size: int=100, consistent_read: bool=False) -> AsyncIterable[dict]:
+    async def batch_get_items_async(self, keys_or_items: Iterable[dict], chunk_size: int=100, consistent_read: bool=False) -> AsyncIterable[dict | None]:
         """
         Get several items at once.
         Yield None for items that do not exist.
