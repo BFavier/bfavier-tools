@@ -42,10 +42,10 @@ Resources:
                   # Initialize ACM and Route 53 clients
                   acm = boto3.client('acm', region_name='us-east-1')
                   route53 = boto3.client('route53')
-          
+
                   if event['RequestType'] == 'Delete':
                       physical_resource_id = json.loads(event['PhysicalResourceId'])
-                      acm.delete_certificate(CertificateArn=event['CertificateArn'])
+                      acm.delete_certificate(CertificateArn=physical_resource_id['CertificateArn'])
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
                       return
 
