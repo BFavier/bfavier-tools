@@ -115,6 +115,7 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - !Ref DefaultPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         - !If
           - NotHasPolicy
           - !Ref AWS::NoValue
