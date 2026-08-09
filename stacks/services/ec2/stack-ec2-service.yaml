@@ -160,6 +160,10 @@ Resources:
           systemctl enable docker
           systemctl start docker
           usermod -a -G docker ec2-user
+          # Install and start SSM Agent
+          dnf install -y amazon-ssm-agent
+          systemctl enable amazon-ssm-agent
+          systemctl start amazon-ssm-agent
           # Pull and run Docker container
           aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${DockerImage}
           docker pull ${DockerImage}
