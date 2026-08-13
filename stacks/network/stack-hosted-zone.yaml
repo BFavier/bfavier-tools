@@ -40,9 +40,7 @@ Resources:
   NameServerChangeLambda:
     Type: AWS::Lambda::Function
     Condition: IsPublicZone
-    DependsOn: NameServerChangeLogGroup
     Properties:
-      FunctionName: NameServerChangeLambda
       Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: python3.12
@@ -122,7 +120,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Condition: IsPublicZone
     Properties:
-      LogGroupName: /aws/lambda/NameServerChangeLambda
+      LogGroupName: !Sub /aws/lambda/${NameServerChangeLambda}
       RetentionInDays: 30
 
 Outputs:

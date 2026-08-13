@@ -13,6 +13,7 @@ Parameters:
 
 Resources:
   USCertificateRequestCustomResource:
+    DependsOn: CertificateRequestLogGroup
     Type: Custom::RequestCertificate
     Properties:
       ServiceToken: !GetAtt USCertificateRequestLambda.Arn
@@ -20,9 +21,7 @@ Resources:
       HostedZoneId: !Ref HostedZoneId
   USCertificateRequestLambda:
     Type: AWS::Lambda::Function
-    DependsOn: CertificateRequestLogGroup
     Properties:
-      FunctionName: USCertificateRequestLambda
       Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: python3.12
@@ -118,7 +117,7 @@ Resources:
   CertificateRequestLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: /aws/lambda/USCertificateRequestLambda
+      LogGroupName: !Sub /aws/lambda/${USCertificateRequestLambda}
       RetentionInDays: 30
 
 Outputs:

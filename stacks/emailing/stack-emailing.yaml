@@ -126,9 +126,7 @@ Resources:
         - '"v=spf1 include:amazonses.com ~all"'
   DomainVerificationLambda:
     Type: AWS::Lambda::Function
-    DependsOn: DomainVerificationLogGroup
     Properties:
-      FunctionName: DomainVerificationLambda
       Runtime: python3.12
       Handler: index.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
@@ -193,6 +191,7 @@ Resources:
                   cfnresponse.send(event, context, cfnresponse.FAILED, {type(e).__name__: str(e)})
   InvokeDomainVerificationLambda:
     Type: Custom::DomainVerification
+    DependsOn: DomainVerificationLogGroup
     Properties:
       ServiceToken: !GetAtt DomainVerificationLambda.Arn
       domain_name: !ImportValue DomainName
@@ -228,7 +227,7 @@ Resources:
   DomainVerificationLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: /aws/lambda/DomainVerificationLambda
+      LogGroupName: !Sub /aws/lambda/${DomainVerificationLambda}
       RetentionInDays: 30
 
   # define webhook/SQS queue for email events
@@ -283,9 +282,7 @@ Resources:
   # ressources to copy the received email in /all into the recipient folder
   StoreEmailLambda:
     Type: AWS::Lambda::Function
-    DependsOn: StoreEmailLambdaLogGroup
     Properties:
-      FunctionName: StoreEmailLambda
       Handler: index.lambda_handler
       Role: !GetAtt StoreEmailLambdaRole.Arn
       Runtime: python3.12
@@ -373,7 +370,7 @@ Resources:
   StoreEmailLambdaLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: /aws/lambda/StoreEmailLambda
+      LogGroupName: !Sub /aws/lambda/${StoreEmailLambda}
       RetentionInDays: 30
   BucketInvokePermission:
     Type: AWS::Lambda::Permission
@@ -415,10 +412,8 @@ Resources:
                 Resource: !GetAtt StoreEmailLambda.Arn
   S3NotificationLambda:
     Type: AWS::Lambda::Function
-    DependsOn: S3NotificationLambdaLogGroup
     Properties:
       Handler: index.handler
-      FunctionName: S3NotificationLambda
       Role: !GetAtt S3NotificationLambdaRole.Arn
       Runtime: python3.12
       Timeout: 60
@@ -472,10 +467,11 @@ Resources:
   S3NotificationLambdaLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: /aws/lambda/S3NotificationLambda
+      LogGroupName: !Sub /aws/lambda/${S3NotificationLambda}
       RetentionInDays: 30
   AttachS3Notification:
     Type: Custom::S3Notification
+    DependsOn: S3NotificationLambdaLogGroup
     Properties:
       ServiceToken: !GetAtt S3NotificationLambda.Arn
       BucketName: !Ref EmailsBucketName
