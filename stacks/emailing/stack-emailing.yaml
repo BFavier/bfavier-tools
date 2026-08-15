@@ -8,9 +8,12 @@ Parameters:
   EmailsPrefix:
     Type: String
     Description: 'The prefix where the emails are written on the S3 bucket (ex: "emails/received-emails/")'
-  Recipients:
-    Type: CommaDelimitedList
-    Description: 'List of email addresses that can receive emails (adresses with the appropriate domain name ex: "john.doe@domain-name.com")'
+  DomainName:
+    Type: String
+    Description: 'The root domain name to receive emails from'
+  HostedZoneId:
+    Type: String
+    Description: 'The ID of the hosted zone where DNS the records will be created'
 
   EmailEvents:
     Type: CommaDelimitedList
@@ -45,7 +48,8 @@ Resources:
       RuleSetName: !Ref SESMailReceiptRuleSet
       Rule:
         Name: StoreEmailInS3
-        Recipients: !Ref Recipients
+        Recipients:
+          - !Ref DomainName
         Actions:
           - S3Action:
               BucketName: !Ref EmailsBucketName
@@ -73,11 +77,11 @@ Resources:
   DMARCRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      HostedZoneId: !ImportValue HostedZoneId
+      HostedZoneId: !Ref HostedZoneId
       Name: !Join
         - ''
         - - _dmarc.
-          - !ImportValue DomainName
+          - !Ref DomainName
           - .
       Type: TXT
       TTL: '300'
@@ -86,8 +90,8 @@ Resources:
   MXRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      HostedZoneId: !ImportValue HostedZoneId
-      Name: !ImportValue DomainName
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
       Type: MX
       TTL: '300'
       ResourceRecords:
@@ -99,11 +103,11 @@ Resources:
   MXMailFromRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      HostedZoneId: !ImportValue HostedZoneId
+      HostedZoneId: !Ref HostedZoneId
       Name: !Join
         - ''
         - - mail.
-          - !ImportValue DomainName
+          - !Ref DomainName
       Type: MX
       TTL: '300'
       ResourceRecords:
@@ -115,11 +119,11 @@ Resources:
   TXTMailFromRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      HostedZoneId: !ImportValue HostedZoneId
+      HostedZoneId: !Ref HostedZoneId
       Name: !Join
         - ''
         - - mail.
-          - !ImportValue DomainName
+          - !Ref DomainName
       Type: TXT
       TTL: '300'
       ResourceRecords:
@@ -194,8 +198,8 @@ Resources:
     DependsOn: DomainVerificationLogGroup
     Properties:
       ServiceToken: !GetAtt DomainVerificationLambda.Arn
-      domain_name: !ImportValue DomainName
-      hosted_zone_id: !ImportValue HostedZoneId
+      domain_name: !Ref DomainName
+      hosted_zone_id: !Ref HostedZoneId
       rule_set_name: !Ref SESMailReceiptRuleSet
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -481,5 +485,3 @@ Resources:
 Outputs:
   SESConfigurationSet:
     Value: !Ref SESConfigurationSet
-  SESEmailRecipients:
-    Value: !Join [",", !Ref Recipients]
