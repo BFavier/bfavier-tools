@@ -2,4 +2,5 @@
 *.pyc
 **/.venv/
 *.vscode
-/build
+**/uv.lock
+/dist

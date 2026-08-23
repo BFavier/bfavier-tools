@@ -19,16 +19,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if package changed
+        id: package_changed
+        shell: bash
+        run: |
+          if git diff --quiet HEAD^ HEAD -- package/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes in package/, skipping publish."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Changes detected in package/."
+          fi
+
       - uses: actions/setup-python@v5
+        if: steps.package_changed.outputs.changed == 'true'
         with:
           python-version: "3.14"
 
       - name: Install build tools
+        if: steps.package_changed.outputs.changed == 'true'
         run: |
           python -m pip install --upgrade pip
           python -m pip install build
 
       - name: Generate version
+        if: steps.package_changed.outputs.changed == 'true'
         id: version
         shell: bash
         run: |
@@ -39,7 +54,7 @@ jobs:
           now = datetime.now(timezone.utc)
           version = f"{now.year}.{now.month}.{now.day}.{now.hour:02}{now.minute:02}{now.second:02}{now.microsecond:06}"
 
-          Path("bfavier_tools/_version.py").write_text(
+          Path("package/bfavier_tools/_version.py").write_text(
               f'__version__ = "{version}"\n'
           )
 
@@ -51,12 +66,15 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build package
-        run: python -m build
+        if: steps.package_changed.outputs.changed == 'true'
+        run: python -m build ./package --outdir dist
 
       - name: Publish to PyPI
+        if: steps.package_changed.outputs.changed == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
 
       - name: Create Git tag
+        if: steps.package_changed.outputs.changed == 'true'
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
 
