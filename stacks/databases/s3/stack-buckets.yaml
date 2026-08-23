@@ -13,10 +13,17 @@ Parameters:
       - Suspended
       - Disabled
     Description: Specify the versioning status for the S3 bucket
+  BucketAccess:
+    Type: String
+    Default: Private
+    AllowedValues:
+      - Private
+      - Public
+    Description: Specify whether the S3 bucket should be private or publicly readable
 
 Conditions:
-  EnableVersioning: !Not
-    - !Equals [ !Ref VersioningStatus, Disabled ]
+  EnableVersioning: !Not [ !Equals [ !Ref VersioningStatus, Disabled ] ]
+  IsPublic: !Equals [!Ref BucketAccess, Public]
 
 Resources:
   Bucket:
@@ -32,6 +39,38 @@ Resources:
         - EnableVersioning
         - Status: !Ref VersioningStatus
         - !Ref AWS::NoValue
+      PublicAccessBlockConfiguration:
+              BlockPublicAcls: !If
+                - IsPublic
+                - false
+                - true
+              BlockPublicPolicy: !If
+                - IsPublic
+                - false
+                - true
+              IgnorePublicAcls: !If
+                - IsPublic
+                - false
+                - true
+              RestrictPublicBuckets: !If
+                - IsPublic
+                - false
+                - true
+
+  PublicReadPolicy:
+    Type: AWS::S3::BucketPolicy
+    Condition: IsPublic
+    Properties:
+      Bucket: !Ref Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicRead
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - s3:GetObject
+            Resource: !Sub '${Bucket.Arn}/*'
 
 Outputs:
   BucketName:
