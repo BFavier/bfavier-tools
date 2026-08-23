@@ -18,12 +18,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Check if package changed
         id: package_changed
         shell: bash
         run: |
-          if git diff --quiet HEAD^ HEAD -- package/; then
+          if git diff --quiet HEAD~1 HEAD -- package/; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No changes in package/, skipping publish."
           else
