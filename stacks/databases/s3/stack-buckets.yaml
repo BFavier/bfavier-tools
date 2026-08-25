@@ -20,10 +20,18 @@ Parameters:
       - Private
       - Public
     Description: Specify whether the S3 bucket should be private or publicly readable
+  WithPublicCloudFront:
+    Type: String
+    Default: "False"
+    AllowedValues:
+      - "True"
+      - "False"
+    Description: If this is enabled, will also create a cloudfront distribution to cache the content globaly. Any content of the s3 bucket will be publicly accessible through it, even if the bucket is private.
 
 Conditions:
   EnableVersioning: !Not [ !Equals [ !Ref VersioningStatus, Disabled ] ]
   IsPublic: !Equals [!Ref BucketAccess, Public]
+  CreateCloudFront: !Equals [ !Ref WithPublicCloudFront, "True" ]
 
 Resources:
   Bucket:
@@ -72,6 +80,93 @@ Resources:
               - s3:GetObject
             Resource: !Sub '${Bucket.Arn}/*'
 
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Condition: CreateCloudFront
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${BucketName}-OAC'
+        Description: !Sub 'CloudFront access to ${BucketName}'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontReadPolicy:
+    Type: AWS::S3::BucketPolicy
+    Condition: CreateCloudFront
+    Properties:
+      Bucket: !Ref Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action:
+              - s3:GetObject
+            Resource: !Sub '${Bucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub
+                  - 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${DistributionId}'
+                  - DistributionId: !Ref CloudFrontDistribution
+
+  CloudFrontCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Condition: CreateCloudFront
+    Properties:
+      CachePolicyConfig:
+        Name: CloudFrontCachePolicy
+        DefaultTTL: 3600
+        MaxTTL: 86400
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Condition: CreateCloudFront
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt Bucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+            OriginAccessControlId:
+              !GetAtt CloudFrontOriginAccessControl.Id
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          CachePolicyId: !Ref CloudFrontCachePolicy
+        HttpVersion: http2
+        PriceClass: PriceClass_100
+
 Outputs:
   BucketName:
     Value: !Ref Bucket
+
+  CloudFrontDistributionId:
+    Condition: CreateCloudFront
+    Description: CloudFront distribution ID
+    Value: !Ref CloudFrontDistribution
+
+  CloudFrontDomainName:
+    Condition: CreateCloudFront
+    Description: CloudFront distribution domain name
+    Value: !GetAtt CloudFrontDistribution.DomainName

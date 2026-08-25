@@ -10,7 +10,7 @@ Parameters:
     Description: Cloudfront redirects in http to this
   UsEast1CertificateArn:
     Type: String
-    Description: ARN of the ACM certificate for the hosted zone.Must be located in us-east-1 region
+    Description: ARN of the ACM certificate for the hosted zone. Must be located in us-east-1 region
   HostedZoneId:
     Type: String
     Description: The ID of the Route53 hosted zone to create the CNAME record in.
